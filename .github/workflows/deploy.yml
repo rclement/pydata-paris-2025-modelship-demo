@@ -1,0 +1,46 @@
+name: Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  demo-deployment:
+    name: Demo Deployment
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      - name: Build static website
+        run: uvx modelship static --output dist --metadata metadata.yml model.onnx
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Generate deployment URL QR code
+        env:
+          DEPLOYMENT_URL: ${{ steps.deployment.outputs.page_url }}
+        run: uvx --from 'qrcode[pil]' qr "${DEPLOYMENT_URL}" > qr.png
+      - name: Upload deployment URL QR code
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-url-qr-code
+          path: qr.png
